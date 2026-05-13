@@ -28,20 +28,17 @@ async function scrapeAllego() {
   const allProducts: ProductOffer[] = [];
 
   try {
-    // Sprawdź czy są cookies z poprzedniej sesji
     let cookies: any[] = [];
     if (fs.existsSync("cookies.json")) {
       cookies = JSON.parse(fs.readFileSync("cookies.json", "utf-8"));
       await page.context().addCookies(cookies);
       console.log("✓ Loaded existing cookies");
     } else {
-      // Pierwsza sesja - trzeba się zalogować
       console.log("\n📱 Opening login page...");
       await page.goto("https://allegro.pl/", { waitUntil: "domcontentloaded" });
       console.log("⏳ Waiting for manual login... Press ENTER in terminal when done:");
-      await page.pause(); // Czeka na Enter w terminalu
-      
-      // Zapisz cookies
+      await page.pause();
+
       const newCookies = await page.context().cookies();
       fs.writeFileSync("cookies.json", JSON.stringify(newCookies, null, 2));
       console.log("✓ Cookies saved!");
@@ -53,44 +50,46 @@ async function scrapeAllego() {
 
       await page.goto(url, { waitUntil: "domcontentloaded" });
       await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
-      
-      // Czekaj na renderowanie
-      await page.waitForTimeout(2000);
 
-      // Dump HTML do pliku
-      const html = await page.content();
-      fs.writeFileSync("html_dump.html", html);
+      await page.waitForTimeout(3000);
 
-      // Parsowanie HTML
       const products = await page.evaluate(() => {
-        const items: ProductOffer[] = [];
-        
-        let rows = document.querySelectorAll("[data-box-name='items'] article");
-        
-        if (rows.length === 0) {
-          rows = document.querySelectorAll("article");
-        }
-        
-        if (rows.length === 0) {
-          rows = document.querySelectorAll("[data-role='offer']");
-        }
+        const result: { title: string; price: string; url: string; id: string }[] = [];
 
-        rows.forEach((row, idx) => {
-          const titleEl = row.querySelector("h2, h3, [data-testid='offer-title'], a");
-          const priceEl = row.querySelector("[data-role='price'], span, [data-testid]");
-          const linkEl = row.querySelector("a[href]");
+        const scripts = document.querySelectorAll('script[type="application/json"]');
+        let listingData: any = null;
 
-          if (titleEl && priceEl && linkEl) {
-            items.push({
-              id: `${Date.now()}-${idx}`,
-              title: titleEl.textContent?.trim() || "",
-              price: priceEl.textContent?.trim() || "",
-              url: linkEl.getAttribute("href") || "",
-            });
+        for (const script of scripts) {
+          try {
+            const text = script.textContent || "";
+            if (text.includes("__listing_StoreState")) {
+              const parsed = JSON.parse(text);
+              listingData = parsed.__listing_StoreState;
+              break;
+            }
+          } catch {
+            continue;
           }
-        });
+        }
 
-        return items;
+        if (!listingData || !listingData.items || !listingData.items.elements) {
+          return result;
+        }
+
+        for (const item of listingData.items.elements) {
+          const title = item.title?.text || item.alt || "";
+          const amount = item.price?.mainPrice?.amount;
+          const currency = item.price?.mainPrice?.currency || "zł";
+          const price = amount ? `${parseFloat(amount).toFixed(2).replace(".", ",")} ${currency}` : "";
+          const url = item.url || "";
+          const id = item.offerId || item.id || "";
+
+          if (title && price) {
+            result.push({ title, price, url, id });
+          }
+        }
+
+        return result;
       });
 
       allProducts.push(...products);
@@ -101,7 +100,6 @@ async function scrapeAllego() {
       }
     }
 
-    // Zapis do JSON
     if (allProducts.length > 0) {
       const jsonOutput = {
         query,

@@ -1,74 +1,73 @@
-# Allegro Web Scraper
+# Allegro Scraper Dashboard
 
-TypeScript-based web scraper for extracting product offers from Allegro.pl using Playwright. Features manual authentication flow, session persistence via cookies, and CSV export.
+![Dashboard](./screen1.png)
 
-## Requirements
+TypeScript web scraper dla Allegro.pl z serwerowym dashboardem. Używa Playwright do scrapowania i Express + EJS do wyświetlania wyników.
+
+## Wymagania
 
 - Node.js >= 18
 - npm
 
-## Installation
+## Instalacja
 
 ```bash
 npm install
 npx playwright install chromium
 ```
 
-## Usage
+## Użycie
 
-Run the scraper with a search query:
+### 1. Scrapowanie danych
 
 ```bash
 npx ts-node scraper.ts -q "kostka rubika"
 ```
 
-### First run (authentication)
+#### Pierwsze uruchomienie (logowanie)
 
-1. The script opens a visible Chromium browser window and navigates to the Allegro login page.
-2. Log in manually in the browser window -- complete any CAPTCHA or two-factor authentication if prompted.
-3. Return to the terminal and press Enter.
-4. The session cookies are saved to `cookies.json` for reuse.
-5. Scraping proceeds automatically.
+1. Otworzy się przeglądarka Chromium z Allegro
+2. Zaloguj się ręcznie (CAPTCHA, 2FA itp.)
+3. W terminalu wciśnij Enter
+4. Cookies zostaną zapisane do `cookies.json`, scrapowanie ruszy automatycznie
 
-### Subsequent runs
+#### Kolejne uruchomienia
 
-If `cookies.json` exists from a previous session, the script loads it and skips the login step, going directly to the search results.
+Jeśli `cookies.json` istnieje, logowanie jest pomijane.
 
-## Output
+### 2. Uruchomienie dashboardu
 
-Results are saved to `wyniki.csv` with the following columns:
+```bash
+npm run server
+```
 
-- `title` -- product offer title
-- `price` -- offer price
-- `url` -- full URL to the product listing
+Otwórz `http://localhost:3000/` — dashboard wyrenderowany po stronie serwera (SSR) z auto-odświeżaniem co 5 sekund.
 
-## Script overview
+### Opcje scrapowania
 
-| Aspect | Details |
-|---|---|
-| Query argument | `-q` or `--query` (required), handled via `commander` |
-| Browser mode | Visible (`headless: false`) |
-| Authentication | Manual login with session saved to `cookies.json` |
-| Extraction target | Product grid via `[data-box-name="items"]` |
-| Data points | Title (`h2`), price (`[data-role="price"]`), link (`a[href]`) |
-| Output format | CSV via `fs.writeFileSync` |
-| Error handling | `try-catch-finally` with forced `browser.close()` |
-| Types | `ProductOffer` interface: `{ title, price, url }` |
+| Flaga | Opis | Domyślnie |
+|-------|------|-----------|
+| `-q, --query` | Fraza wyszukiwania | `kostka rubika` |
+| `-p, --pages` | Liczba stron do scrapowania | `1` |
 
-## File structure
+## API
+
+| Endpoint | Zwraca |
+|----------|--------|
+| `GET /api/results` | JSON z danymi produktów |
+
+## Architektura
 
 ```
 .
-├── scraper.ts         main script
-├── package.json       dependencies and scripts
-├── tsconfig.json      TypeScript configuration
-├── cookies.json       persisted session (auto-generated)
-├── wyniki.csv         scraped results (auto-generated)
-└── README.md          this file
+├── scraper.ts            skrypt scrapujący (Playwright)
+├── server.ts             serwer Express z SSR (EJS)
+├── views/dashboard.ejs   szablon dashboardu
+├── screen1.png           zrzut ekranu dashboardu
+├── wyniki.json           dane ze scrapowania (auto-generated)
+├── cookies.json          zapisane sesje (auto-generated)
+├── package.json
+└── tsconfig.json
 ```
 
-## Notes
-
-- The scraper targets Allegro.pl listing pages. If Allegro changes its DOM structure, selectors in the `extractProducts` function may need updating.
-- Session cookies expire after some time. When they do, delete `cookies.json` to trigger a fresh login.
-- The script sets `locale: "pl-PL"` and a 1280x800 viewport for consistent rendering.
+Scraper parsuje dane z osadzonego JSON (`__listing_StoreState`) na stronie Allegro, a serwer renderuje dashboard po stronie serwera z możliwością filtrowania produktów.
