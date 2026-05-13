@@ -1,6 +1,6 @@
 # Allegro Web Scraper
 
-TypeScript-based web scraper for extracting product offers from Allegro.pl using Playwright. Features manual authentication flow, session persistence via cookies, and CSV export.
+TypeScript-based web scraper for extracting product offers from Allegro.pl using Playwright. Features manual authentication flow, session persistence via cookies, and JSON export.
 
 ## Requirements
 
