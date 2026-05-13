@@ -1,0 +1,15 @@
+node_modules/
+.env
+.DS_Store
+cookies.json
+html_dump.html
+*.log
+dist/
+build/
+.vscode/
+*.swp
+*.swo
+*~
+.idea/
+*.iml
+.DS_Store
