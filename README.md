@@ -63,7 +63,7 @@ Results are saved to `wyniki.csv` with the following columns:
 ├── package.json       dependencies and scripts
 ├── tsconfig.json      TypeScript configuration
 ├── cookies.json       persisted session (auto-generated)
-├── wyniki.csv         scraped results (auto-generated)
+├── wyniki.json        scraped results (auto-generated)
 └── README.md          this file
 ```
 
